@@ -1,0 +1,11 @@
+{
+  "name": "doom",
+  "label": "Doom",
+  "description": "Play Doom in a dashboard tab: the GPL engine as plain JavaScript, on Freedoom or your own WAD.",
+  "icon": "Gamepad2",
+  "version": "0.1.0",
+  "tab": { "path": "/doom", "position": "end" },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

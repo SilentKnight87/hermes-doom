@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Doom for Hermes</title>
+    <link rel="stylesheet" href="player.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="brand">
+        <span class="brand-mark">DOOM</span>
+        <span class="brand-sub">running inside Hermes Agent</span>
+      </div>
+      <div class="bar-actions">
+        <span id="game-title" class="game-title"></span>
+        <button id="fullscreen" type="button" class="ghost" hidden>Fullscreen</button>
+        <button id="quit" type="button" class="ghost" hidden>Change game</button>
+      </div>
+    </header>
+
+    <main id="stage" class="stage">
+      <canvas id="screen" width="640" height="400" tabindex="0" aria-label="Doom screen"></canvas>
+
+      <section id="menu" class="menu" aria-live="polite">
+        <h1>Pick your game data</h1>
+        <p class="lede">
+          The Doom engine is free software and ships with this plugin. The levels and art live in a
+          separate WAD file.
+        </p>
+        <div id="wads" class="wads"></div>
+        <div class="choices">
+          <button id="freedoom" type="button" class="primary" hidden></button>
+          <button id="own" type="button" class="secondary">Open my own WAD file</button>
+          <input id="own-file" type="file" accept=".wad,.WAD" hidden />
+        </div>
+        <p id="status" class="status" role="status"></p>
+        <p class="fine">
+          Own a copy of Doom? Open its <code>DOOM.WAD</code> above, or drop it in
+          <code id="data-dir">the plugin data folder</code> to keep it in this list. Files you open stay
+          in this browser tab.
+        </p>
+      </section>
+
+      <p id="focus-hint" class="focus-hint" hidden>Click the game to take the keyboard</p>
+    </main>
+
+    <footer class="keys" aria-label="Controls">
+      <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span>
+      <span><kbd>←</kbd><kbd>→</kbd> turn</span>
+      <span><kbd>F</kbd> or click to fire</span>
+      <span><kbd>Space</kbd> open</span>
+      <span><kbd>Shift</kbd> run</span>
+      <span><kbd>1</kbd>–<kbd>7</kbd> weapons</span>
+      <span><kbd>Tab</kbd> map</span>
+      <span><kbd>Esc</kbd> menu</span>
+    </footer>
+
+    <script src="doom-engine.js"></script>
+    <script src="player.js"></script>
+  </body>
+</html>

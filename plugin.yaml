@@ -1,0 +1,9 @@
+name: doom
+version: "0.1.0"
+requires_hermes: ">=0.23.0"
+description: Play Doom in a Hermes dashboard tab. The GPL engine runs as plain JavaScript on Freedoom or your own WAD.
+license: GPL-2.0-or-later
+provides_tools: []
+provides_hooks: []
+provides_middleware: []
+requires_env: []
