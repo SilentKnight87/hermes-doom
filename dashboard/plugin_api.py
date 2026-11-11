@@ -16,6 +16,7 @@ import threading
 import urllib.request
 import zipfile
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
@@ -43,31 +44,49 @@ def data_dir() -> Path:
     return plugin_data_dir(PLUGIN_NAME)
 
 
+OPEN_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+
+
 def open_regular(path: Path) -> int:
-    """Open a real file for reading, refusing symlinks so nothing outside the data directory is read."""
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    """Open a real file for reading.
+
+    Symlinks are refused so nothing outside the data directory is read, and the open never
+    blocks, so a FIFO or device planted there is rejected instead of hanging the request.
+    """
+    descriptor = os.open(path, OPEN_FLAGS)
     if not stat.S_ISREG(os.fstat(descriptor).st_mode):
         os.close(descriptor)
         raise OSError("not a regular file")
     return descriptor
 
 
-def is_iwad(path: Path) -> bool:
-    if path.is_symlink():
-        return False
+def read_regular(path: Path) -> Optional[bytes]:
     try:
         with os.fdopen(open_regular(path), "rb") as handle:
-            return handle.read(4) == IWAD_MAGIC
+            return handle.read()
     except OSError:
-        return False
+        return None
+
+
+def iwad_size(path: Path) -> Optional[int]:
+    """Size of a real IWAD file, or None. The magic and the size come from one descriptor."""
+    try:
+        descriptor = open_regular(path)
+    except OSError:
+        return None
+    with os.fdopen(descriptor, "rb") as handle:
+        if handle.read(4) != IWAD_MAGIC:
+            return None
+        return os.fstat(handle.fileno()).st_size
 
 
 def list_wads(directory: Path) -> list[dict]:
     wads = []
     for path in sorted(directory.iterdir()):
-        if WAD_NAME.match(path.name) and is_iwad(path):
+        size = iwad_size(path) if WAD_NAME.match(path.name) else None
+        if size is not None:
             source = "freedoom" if path.name == FREEDOOM_WAD else "user"
-            wads.append({"name": path.name, "bytes": path.stat().st_size, "source": source})
+            wads.append({"name": path.name, "bytes": size, "source": source})
     return wads
 
 
@@ -113,7 +132,8 @@ def download_freedoom() -> bytes:
 def install_freedoom(directory: Path, fetch=download_freedoom) -> Path:
     target = directory / FREEDOOM_WAD
     with _download_lock:
-        if is_iwad(target) and hashlib.sha256(target.read_bytes()).hexdigest() == FREEDOOM_WAD_SHA256:
+        installed = read_regular(target)
+        if installed is not None and hashlib.sha256(installed).hexdigest() == FREEDOOM_WAD_SHA256:
             return target
         wad = extract_freedoom(fetch())
         descriptor, partial = tempfile.mkstemp(dir=directory, prefix=".freedoom-", suffix=".part")
@@ -147,8 +167,7 @@ def get_wad(name: str):
     directory = data_dir()
     if not any(wad["name"] == name for wad in list_wads(directory)):
         raise HTTPException(404, "No such WAD in the plugin data directory")
-    try:
-        with os.fdopen(open_regular(directory / name), "rb") as handle:
-            return Response(handle.read(), media_type="application/octet-stream")
-    except OSError as exc:
-        raise HTTPException(404, "No such WAD in the plugin data directory") from exc
+    content = read_regular(directory / name)
+    if content is None:
+        raise HTTPException(404, "No such WAD in the plugin data directory")
+    return Response(content, media_type="application/octet-stream")

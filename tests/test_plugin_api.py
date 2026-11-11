@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import io
+import os
 import sys
 import tempfile
 import types
@@ -94,6 +95,16 @@ class PluginApiTest(unittest.TestCase):
         self.assertEqual(self.api.library(self.dir)["wads"], [])
         with self.assertRaises(HTTPException):
             self.api.get_wad("escape.wad")
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "needs named pipes")
+    def test_planted_fifo_is_skipped_without_blocking(self):
+        from fastapi import HTTPException
+
+        os.mkfifo(self.dir / "hang.wad")
+        (self.dir / "doom.wad").write_bytes(b"IWAD" + b"\0" * 8)
+        self.assertEqual([wad["name"] for wad in self.api.library(self.dir)["wads"]], ["doom.wad"])
+        with self.assertRaises(HTTPException):
+            self.api.get_wad("hang.wad")
 
     def test_install_does_not_write_through_planted_symlinks(self):
         wad = b"IWAD" + b"freedoom"
