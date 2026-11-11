@@ -47,7 +47,7 @@ Only IWAD files are listed. Add-on PWADs are not supported yet.
 ## What the plugin does on your machine
 
 - **One network download, only when you ask.** Clicking **Download Freedoom and play** fetches
-  `freedoom-0.13.0.zip` (24 MB) from the Freedoom project's official GitHub release. The plugin
+  `freedoom-0.13.0.zip` (23 MB) from the Freedoom project's official GitHub release. The plugin
   checks the archive and the extracted `freedoom1.wad` against SHA-256 digests pinned in
   `dashboard/plugin_api.py` and refuses anything that does not match.
 - **Files:** it reads and writes only its own data folder, `~/.hermes/plugin-data/doom/`.
