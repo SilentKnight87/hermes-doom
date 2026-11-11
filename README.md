@@ -59,17 +59,15 @@ Only IWAD files are listed. Add-on PWADs are not supported yet.
 
 The engine is [doomgeneric](https://github.com/ozkl/doomgeneric), a portable build of id Software's
 GPL Doom source. `engine/doomgeneric_hermes.c` is the small platform layer that hands frames to a
-canvas and takes key presses. Emscripten compiles both to plain JavaScript (`-sWASM=0`), which is
-`dashboard/dist/doom-engine.js`.
+canvas and takes key presses. Emscripten 7.0.0 compiles both to plain JavaScript (`-sWASM=0`), which
+is `dashboard/dist/doom-engine.js`. Its static data is base64 text inside that file.
 
 To rebuild it yourself with the [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html)
 on your `PATH`:
 
-```bash
-git clone https://github.com/ozkl/doomgeneric build/doomgeneric
-git -C build/doomgeneric checkout e257a09527062bfb986b6e5e0780839b6cbd5b71
-engine/build.sh
-```
+1. Check out doomgeneric at commit `e257a09527062bfb986b6e5e0780839b6cbd5b71` into
+   `build/doomgeneric`.
+2. Run `engine/build.sh`.
 
 Run the backend tests with Hermes's Python:
 

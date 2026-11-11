@@ -13,7 +13,7 @@ mkdir -p "$OUT"
 emcc -O2 -w -I"$SRC" $SOURCES "$HERE/doomgeneric_hermes.c" \
   -sWASM=0 -sMODULARIZE=1 -sEXPORT_NAME=createDoomEngine -sENVIRONMENT=web \
   -sDYNAMIC_EXECUTION=0 -sALLOW_MEMORY_GROWTH=0 -sINITIAL_MEMORY=134217728 \
-  -sEXPORTED_FUNCTIONS=_main,_hd_key -sEXPORTED_RUNTIME_METHODS=FS,HEAPU32,callMain \
+  -sWASMFS=1 -sFORCE_FILESYSTEM=1 -sEXPORTED_FUNCTIONS=_main,_hd_key -sEXPORTED_RUNTIME_METHODS=FS,HEAPU32,callMain \
   -sINVOKE_RUN=0 -sEXIT_RUNTIME=0 \
   -o "$OUT/doom-engine.js"
 echo "built $OUT/doom-engine.js from doomgeneric $DOOMGENERIC_REV"

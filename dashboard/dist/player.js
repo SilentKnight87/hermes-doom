@@ -44,6 +44,10 @@
     F11: 0xd7,
   };
   const FIRE = DOOM_KEY.ControlLeft;
+  const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const ASCII_A = 97;
+  const ASCII_0 = 48;
+  const IWAD_MAGIC = [0x49, 0x57, 0x41, 0x44];
 
   const el = {
     stage: document.getElementById("stage"),
@@ -172,8 +176,7 @@
     say("Reading " + file.name + "…");
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      const magic = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
-      if (magic !== "IWAD") throw new Error("that file is not a Doom IWAD");
+      if (!IWAD_MAGIC.every((byte, index) => bytes[index] === byte)) throw new Error("that file is not a Doom IWAD");
       await start(file.name, bytes);
     } catch (error) {
       say("Could not start " + file.name + ": " + error.message, true);
@@ -219,7 +222,10 @@
 
   function doomKey(event) {
     if (event.code in DOOM_KEY) return DOOM_KEY[event.code];
-    if (event.key.length === 1) return event.key.toLowerCase().charCodeAt(0) & 0xff;
+    const letter = /^Key([A-Z])$/.exec(event.code);
+    if (letter) return ASCII_A + LETTERS.indexOf(letter[1]);
+    const digit = /^Digit([0-9])$/.exec(event.code);
+    if (digit) return ASCII_0 + Number(digit[1]);
     return 0;
   }
 
