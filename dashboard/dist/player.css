@@ -81,7 +81,7 @@ body {
   height: 100%;
   max-width: 100%;
   aspect-ratio: 4 / 3;
-  object-fit: contain;
+  object-fit: fill;
   background: #000;
   border: 1px solid var(--edge);
   image-rendering: pixelated;
