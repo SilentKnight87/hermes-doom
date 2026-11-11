@@ -8,14 +8,17 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import re
+import stat
+import tempfile
 import threading
 import urllib.request
 import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 
 from plugins.plugin_storage import plugin_data_dir
 
@@ -40,9 +43,20 @@ def data_dir() -> Path:
     return plugin_data_dir(PLUGIN_NAME)
 
 
+def open_regular(path: Path) -> int:
+    """Open a real file for reading, refusing symlinks so nothing outside the data directory is read."""
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        os.close(descriptor)
+        raise OSError("not a regular file")
+    return descriptor
+
+
 def is_iwad(path: Path) -> bool:
+    if path.is_symlink():
+        return False
     try:
-        with path.open("rb") as handle:
+        with os.fdopen(open_regular(path), "rb") as handle:
             return handle.read(4) == IWAD_MAGIC
     except OSError:
         return False
@@ -51,7 +65,7 @@ def is_iwad(path: Path) -> bool:
 def list_wads(directory: Path) -> list[dict]:
     wads = []
     for path in sorted(directory.iterdir()):
-        if path.is_file() and WAD_NAME.match(path.name) and is_iwad(path):
+        if WAD_NAME.match(path.name) and is_iwad(path):
             source = "freedoom" if path.name == FREEDOOM_WAD else "user"
             wads.append({"name": path.name, "bytes": path.stat().st_size, "source": source})
     return wads
@@ -99,12 +113,17 @@ def download_freedoom() -> bytes:
 def install_freedoom(directory: Path, fetch=download_freedoom) -> Path:
     target = directory / FREEDOOM_WAD
     with _download_lock:
-        if target.exists() and hashlib.sha256(target.read_bytes()).hexdigest() == FREEDOOM_WAD_SHA256:
+        if is_iwad(target) and hashlib.sha256(target.read_bytes()).hexdigest() == FREEDOOM_WAD_SHA256:
             return target
         wad = extract_freedoom(fetch())
-        partial = directory / (FREEDOOM_WAD + ".part")
-        partial.write_bytes(wad)
-        partial.replace(target)
+        descriptor, partial = tempfile.mkstemp(dir=directory, prefix=".freedoom-", suffix=".part")
+        try:
+            with os.fdopen(descriptor, "wb") as handle:
+                handle.write(wad)
+            os.replace(partial, target)
+        except OSError:
+            Path(partial).unlink(missing_ok=True)
+            raise
     return target
 
 
@@ -128,4 +147,8 @@ def get_wad(name: str):
     directory = data_dir()
     if not any(wad["name"] == name for wad in list_wads(directory)):
         raise HTTPException(404, "No such WAD in the plugin data directory")
-    return FileResponse(directory / name, media_type="application/octet-stream")
+    try:
+        with os.fdopen(open_regular(directory / name), "rb") as handle:
+            return Response(handle.read(), media_type="application/octet-stream")
+    except OSError as exc:
+        raise HTTPException(404, "No such WAD in the plugin data directory") from exc

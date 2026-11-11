@@ -3,8 +3,8 @@
 
   const WIDTH = 640;
   const HEIGHT = 400;
-  const prefix = window.location.pathname.split("/dashboard-plugins/")[0];
-  const API = prefix + "/api/plugins/doom";
+  const PREFIX = window.location.pathname.split("/dashboard-plugins/")[0];
+  const API = "/api/plugins/doom";
 
   const DOOM_KEY = {
     ArrowRight: 0xae,
@@ -79,7 +79,7 @@
       sdk = null;
     }
     if (sdk && typeof sdk.authedFetch === "function") return sdk.authedFetch(url, options);
-    return fetch(url, Object.assign({ credentials: "include" }, options));
+    return fetch(PREFIX + url, Object.assign({ credentials: "include" }, options));
   }
 
   async function request(path, options) {
@@ -210,13 +210,18 @@
         throw reason;
       },
     };
-    engine = await window.createDoomEngine(module);
     const path = "/" + name.toLowerCase().replace(/[^a-z0-9._-]/g, "_");
-    engine.FS.writeFile(path, bytes);
+    try {
+      engine = await window.createDoomEngine(module);
+      engine.FS.writeFile(path, bytes);
+      engine.callMain(["-iwad", path]);
+    } catch (error) {
+      engine = null;
+      throw error;
+    }
     el.menu.hidden = true;
     el.fullscreen.hidden = false;
     el.quit.hidden = false;
-    engine.callMain(["-iwad", path]);
     el.screen.focus();
   }
 
@@ -256,6 +261,10 @@
   el.screen.addEventListener("blur", function () {
     releaseAll();
     el.focusHint.hidden = !engine;
+  });
+  window.addEventListener("blur", releaseAll);
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) releaseAll();
   });
   el.screen.addEventListener("focus", function () {
     el.focusHint.hidden = true;

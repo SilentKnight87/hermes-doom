@@ -79,10 +79,34 @@ class PluginApiTest(unittest.TestCase):
         from fastapi import HTTPException
 
         (self.dir / "doom.wad").write_bytes(b"IWAD" + b"\0" * 8)
-        self.assertEqual(Path(self.api.get_wad("doom.wad").path), self.dir / "doom.wad")
+        self.assertEqual(self.api.get_wad("doom.wad").body, b"IWAD" + b"\0" * 8)
         for name in ("missing.wad", "../doom.wad", "notes.txt"):
             with self.assertRaises(HTTPException):
                 self.api.get_wad(name)
+
+    def test_symlinked_wad_is_neither_listed_nor_served(self):
+        from fastapi import HTTPException
+
+        outside = Path(self.tmp.name + "-outside.wad")
+        outside.write_bytes(b"IWAD" + b"secret")
+        self.addCleanup(outside.unlink)
+        (self.dir / "escape.wad").symlink_to(outside)
+        self.assertEqual(self.api.library(self.dir)["wads"], [])
+        with self.assertRaises(HTTPException):
+            self.api.get_wad("escape.wad")
+
+    def test_install_does_not_write_through_planted_symlinks(self):
+        wad = b"IWAD" + b"freedoom"
+        archive = self.pin(wad)
+        outside = Path(self.tmp.name + "-victim")
+        outside.write_bytes(b"keep me")
+        self.addCleanup(outside.unlink)
+        (self.dir / "freedoom1.wad.part").symlink_to(outside)
+        (self.dir / "freedoom1.wad").symlink_to(outside)
+        self.api.install_freedoom(self.dir, lambda: archive)
+        self.assertEqual(outside.read_bytes(), b"keep me")
+        self.assertFalse((self.dir / "freedoom1.wad").is_symlink())
+        self.assertEqual((self.dir / "freedoom1.wad").read_bytes(), wad)
 
 
 if __name__ == "__main__":
